@@ -1,3 +1,3 @@
-module github.com/JackGeass/gocalendar
+module github.com/jackgeass/gocalendar
 
 go 1.13
