@@ -174,6 +174,44 @@ func (sc *Calendar) NowCalendars() []*CalendarData {
 	return sc.calendars(TimeToDate(nt))
 }
 
+// CalendarsDetail 日历,包括公历和农历,方便计算天干地支
+func (sc *Calendar) CalendarsDetail(year, month, day, hour, minute, second int) []*CalendarData {
+	if sc.Loc == nil {
+		sc.Loc = time.Local
+	}
+	if sc.FirstWeek < 0 || sc.FirstWeek > 6 {
+		sc.FirstWeek = 0
+	}
+
+	var cds []*CalendarData
+	solarDates := sc.SolarCalendarDetail(year, month, day, hour, minute, second)
+	for _, dv := range solarDates {
+		cd := new(CalendarData)
+		cd.SD = dv
+		ld, err := sc.Solar2Lunar(dv)
+		if err == nil {
+			cd.LD = ld
+		}
+		cds = append(cds, cd)
+	}
+
+	return cds
+}
+
+// SolarCalendarDetail 日历,公历
+func (sc *Calendar) SolarCalendarDetail(year, month, day, hour, minute, second int) []*SolarDate {
+	if sc.Loc == nil {
+		sc.Loc = time.Local
+	}
+	if sc.FirstWeek < 0 || sc.FirstWeek > 6 {
+		sc.FirstWeek = 0
+	}
+
+	sd := TimeToDate(time.Date(year, time.Month(month), day, hour, minute, second, 0, sc.Loc))
+
+	return sc.solarCalendar(sd)
+}
+
 // Calendars 日历,包括公历和农历
 func (sc *Calendar) Calendars(y, m, d int) []*CalendarData {
 	if sc.Loc == nil {
@@ -454,7 +492,7 @@ func (sc *Calendar) Solar2Lunar(sd *SolarDate) (*LunarDate, error) {
 
 	ld.LeapYear = sc.leap(ld.Year) // 闰几月，0为无闰月
 
-	isLeapMonth := 0 // 初始,该月是否为闰月
+	isLeapMonth := 0                                             // 初始,该月是否为闰月
 	if ld.LeapYear > 0 && (mc[mi]-math.Floor(mc[mi]))*2+1 != 1 { // 因mc(mi)=0对应到前一年农历11月,mc(mi)=1对应到前一年农历12月,mc(mi)=2对应到本年1月,依此类推
 		isLeapMonth = 1
 	}
@@ -512,7 +550,7 @@ func (sc *Calendar) Lunar2Solar(ly, lm, ld, isLeap int) (*SolarDate, error) {
 		return nil, err
 	}
 
-	leap := 0 // 若闰月旗标为0代表无闰月
+	leap := 0                  // 若闰月旗标为0代表无闰月
 	for j := 1; j <= 14; j++ { // 确认指定年前一年11月开始各月是否闰月
 		if mc[j]-math.Floor(mc[j]) > 0 { // 若是,则将此闰月代码放入闰月旗标內
 			leap = int(math.Floor(mc[j] + 0.5)) // leap=0对应农历11月,1对应农历12月,2对应农历隔年1月,依此类推.
@@ -840,7 +878,7 @@ func (sc *Calendar) leap(ly int) int {
 		return 0
 	}
 
-	var leap float64 = 0 // 若闰月旗标为0代表无闰月
+	var leap float64 = 0       // 若闰月旗标为0代表无闰月
 	for j := 1; j <= 14; j++ { // 确认指定年前一年11月开始各月是否闰月
 		if mc[j]-math.Floor(mc[j]) > 0 { // 若是,则将此闰月代码放入闰月旗标內
 			leap = math.Floor(mc[j] + 0.5) // leap = 0对应农历11月,1对应农历12月,2对应农历隔年1月,依此类推.
@@ -859,7 +897,7 @@ func (sc *Calendar) lunarDays(ly, lm, isLeap int) (int, error) {
 		return 0, err
 	}
 
-	leap := 0 // 若闰月旗标为0代表无闰月
+	leap := 0                  // 若闰月旗标为0代表无闰月
 	for j := 1; j <= 14; j++ { // 确认指定年前一年11月开始各月是否闰月
 		if mc[j]-math.Floor(mc[j]) > 0 { // 若是,则将此闰月代码放入闰月旗标內
 			leap = int(math.Floor(mc[j] + 0.5)) // leap=0对应农历11月,1对应农历12月,2对应农历隔年1月,依此类推.
